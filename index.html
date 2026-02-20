@@ -1,0 +1,648 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Birth Chart Engine | DIVYA-DATA</title>
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;600;800&family=Playfair+Display:ital,wght@0,700;1,700&display=swap" rel="stylesheet">
+    
+    <style>
+        :root {
+            --blush-pink: #FCE7F3;
+            --soft-lilac: #EDE9FE;
+            --sky-blue: #E0F2FE;
+            --cream-bg: #FCFBFA;
+            --text-main: #2D3748;
+            --text-muted: #718096;
+            --accent-gradient: linear-gradient(135deg, #F9A8D4 0%, #C084FC 100%);
+            --secondary-gradient: linear-gradient(135deg, #A5B4FC 0%, #7DD3FC 100%);
+            --glass-bg: rgba(255, 255, 255, 0.75);
+            --glass-border: rgba(255, 255, 255, 0.5);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background: var(--cream-bg);
+            color: var(--text-main);
+            line-height: 1.6;
+            overflow-x: hidden;
+            background-image: 
+                radial-gradient(at 0% 0%, var(--blush-pink) 0, transparent 50%),
+                radial-gradient(at 100% 0%, var(--sky-blue) 0, transparent 50%),
+                radial-gradient(at 50% 100%, var(--soft-lilac) 0, transparent 50%);
+            min-height: 100vh;
+        }
+
+        /* --- UI Components --- */
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 2rem 1rem;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 3rem;
+            animation: fadeInDown 1s ease;
+        }
+
+        .brand {
+            font-weight: 800;
+            letter-spacing: 2px;
+            color: #C084FC;
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+            display: block;
+        }
+
+        h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.5rem;
+            color: #1A202C;
+            margin-bottom: 1rem;
+        }
+
+        .subtitle {
+            color: var(--text-muted);
+            font-size: 1rem;
+            max-width: 500px;
+            margin: 0 auto;
+        }
+
+        /* --- Glass Card --- */
+        .glass-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            border-radius: 24px;
+            padding: 2.5rem;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.03);
+            margin-bottom: 2rem;
+            transition: transform 0.3s ease;
+        }
+
+        /* --- Form --- */
+        .input-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 768px) {
+            .input-grid { grid-template-columns: 1fr; }
+            h1 { font-size: 2rem; }
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            position: relative;
+        }
+
+        label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            padding-left: 0.5rem;
+        }
+
+        input {
+            padding: 1rem;
+            border-radius: 12px;
+            border: 1px solid #E2E8F0;
+            background: rgba(255, 255, 255, 0.8);
+            font-size: 1rem;
+            font-family: inherit;
+            transition: all 0.3s ease;
+            width: 100%;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: #C084FC;
+            box-shadow: 0 0 0 4px rgba(192, 132, 252, 0.1);
+        }
+
+        /* --- Location Autocomplete --- */
+        .autocomplete-list {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            z-index: 100;
+            max-height: 200px;
+            overflow-y: auto;
+            display: none;
+            margin-top: 5px;
+        }
+
+        .autocomplete-item {
+            padding: 10px 15px;
+            cursor: pointer;
+            border-bottom: 1px solid #F7FAFC;
+            font-size: 0.9rem;
+        }
+
+        .autocomplete-item:hover {
+            background-color: var(--soft-lilac);
+        }
+
+        .cta-btn {
+            grid-column: 1 / -1;
+            background: var(--accent-gradient);
+            color: white;
+            border: none;
+            padding: 1.2rem;
+            border-radius: 16px;
+            font-weight: 700;
+            font-size: 1.1rem;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 10px 20px rgba(249, 168, 212, 0.3);
+            margin-top: 1rem;
+        }
+
+        .cta-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 15px 30px rgba(249, 168, 212, 0.4);
+        }
+
+        /* --- Loading State --- */
+        #loader {
+            display: none;
+            text-align: center;
+            padding: 3rem;
+        }
+
+        .spinner {
+            width: 50px;
+            height: 50px;
+            border: 4px solid var(--blush-pink);
+            border-top: 4px solid #C084FC;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 1.5rem;
+        }
+
+        /* --- Results Styling --- */
+        #results {
+            display: none;
+            animation: fadeInUp 0.8s ease;
+        }
+
+        .report-section { margin-bottom: 3rem; }
+
+        .section-title {
+            font-family: 'Playfair Display', serif;
+            font-size: 1.8rem;
+            margin-bottom: 2rem;
+            text-align: center;
+            color: #4A5568;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1.5rem;
+            margin-bottom: 3rem;
+        }
+
+        @media (max-width: 600px) {
+            .summary-grid { grid-template-columns: 1fr; }
+        }
+
+        .sign-card {
+            text-align: center;
+            padding: 2rem 1rem;
+            border-radius: 20px;
+            background: white;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.02);
+            border: 1px solid rgba(0,0,0,0.03);
+        }
+
+        .sign-card h3 {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            margin-bottom: 1rem;
+        }
+
+        .sign-value {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: #6B46C1;
+        }
+
+        .insight-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 2rem;
+        }
+
+        @media (max-width: 768px) {
+            .insight-grid { grid-template-columns: 1fr; }
+        }
+
+        .insight-block { padding: 1.5rem; }
+
+        .insight-block h4 {
+            font-family: 'Playfair Display', serif;
+            margin-bottom: 0.8rem;
+            color: #2D3748;
+            font-size: 1.2rem;
+        }
+
+        .chart-container {
+            position: relative;
+            margin: auto;
+            height: 280px;
+            width: 100%;
+        }
+
+        /* --- Animations --- */
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeInUp {
+            from { opacity: 0; transform: translateY(30px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        footer {
+            text-align: center;
+            padding: 4rem 1rem;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            letter-spacing: 1px;
+        }
+
+        /* Cosmic Elements */
+        .glow {
+            position: fixed;
+            width: 300px;
+            height: 300px;
+            background: radial-gradient(circle, rgba(237, 233, 254, 0.6) 0%, transparent 70%);
+            z-index: -1;
+            filter: blur(50px);
+            pointer-events: none;
+        }
+
+        /* --- PDF PRINT OVERRIDES --- */
+        @media print {
+            body { background: white !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .glow, header, #form-section, footer, .cta-btn, #loader { display: none !important; }
+            #results { display: block !important; margin: 0; padding: 0; }
+            .container { max-width: 100%; width: 100%; padding: 0; }
+            .glass-card { 
+                box-shadow: none !important; 
+                border: 1px solid #EEE !important; 
+                background: white !important; 
+                backdrop-filter: none !important;
+                margin-bottom: 1rem !important;
+                break-inside: avoid;
+            }
+            .section-title::before {
+                content: "DIVYA-DATA | Birth Chart Report for " attr(data-name);
+                display: block;
+                font-size: 0.8rem;
+                text-transform: uppercase;
+                margin-bottom: 2rem;
+                color: #C084FC;
+            }
+            .chart-container { height: 200px !important; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="glow" style="top: 10%; left: -5%;"></div>
+    <div class="glow" style="bottom: 10%; right: -5%;"></div>
+
+    <div class="container">
+        <header>
+            <span class="brand">DIVYA-DATA Presents</span>
+            <h1>AI Birth Chart Engine</h1>
+            <p class="subtitle">Experience a psychological portrait of your soul through the precise alignment of the heavens.</p>
+        </header>
+
+        <section id="form-section" class="glass-card">
+            <form id="astrology-form">
+                <div class="input-grid">
+                    <div class="form-group">
+                        <label>Full Name</label>
+                        <input type="text" id="name" placeholder="Enter your name" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Date of Birth</label>
+                        <input type="date" id="dob" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Time of Birth</label>
+                        <input type="time" id="tob" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Place of Birth</label>
+                        <input type="text" id="pob" placeholder="Start typing city..." autocomplete="off" required>
+                        <div id="autocomplete-list" class="autocomplete-list"></div>
+                    </div>
+                    <button type="submit" class="cta-btn">Illuminate My Path</button>
+                </div>
+            </form>
+        </section>
+
+        <section id="loader">
+            <div class="spinner"></div>
+            <p style="font-family: 'Playfair Display', serif; font-style: italic;">Consulting the celestial movements...</p>
+        </section>
+
+        <section id="results">
+            <div class="glass-card" id="main-report">
+                <h2 class="section-title" id="report-title">The Cosmic Trinity</h2>
+                <div class="summary-grid">
+                    <div class="sign-card">
+                        <h3>Sun Sign</h3>
+                        <div class="sign-value" id="res-sun">---</div>
+                        <p style="font-size: 0.75rem; color: #718096; margin-top: 5px;">Core Identity</p>
+                    </div>
+                    <div class="sign-card" style="background: var(--soft-lilac);">
+                        <h3>Moon Sign</h3>
+                        <div class="sign-value" id="res-moon">---</div>
+                        <p style="font-size: 0.75rem; color: #718096; margin-top: 5px;">Emotional Truth</p>
+                    </div>
+                    <div class="sign-card">
+                        <h3>Rising (ASC)</h3>
+                        <div class="sign-value" id="res-asc">---</div>
+                        <p style="font-size: 0.75rem; color: #718096; margin-top: 5px;">Social Mask</p>
+                    </div>
+                </div>
+
+                <div class="insight-grid report-section">
+                    <div class="insight-block">
+                        <h4>Psychological Analysis</h4>
+                        <p id="analysis-personality" class="text-muted"></p>
+                    </div>
+                    <div class="insight-block">
+                        <h4>Love & Connections</h4>
+                        <p id="analysis-love" class="text-muted"></p>
+                    </div>
+                    <div class="insight-block">
+                        <h4>Career & Ambition</h4>
+                        <p id="analysis-career" class="text-muted"></p>
+                    </div>
+                    <div class="insight-block">
+                        <h4>Spiritual Resonance</h4>
+                        <p id="analysis-spiritual" class="text-muted"></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="insight-grid">
+                <div class="glass-card">
+                    <h3 class="section-title" style="font-size: 1.2rem;">Element Balance</h3>
+                    <div class="chart-container">
+                        <canvas id="elementChart"></canvas>
+                    </div>
+                </div>
+                <div class="glass-card">
+                    <h3 class="section-title" style="font-size: 1.2rem;">Planetary Intensity</h3>
+                    <div class="chart-container">
+                        <canvas id="planetChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <div class="glass-card" style="text-align: center;">
+                <h3 class="section-title">Final Emotional Insight</h3>
+                <p id="final-verdict" style="font-style: italic; color: #4A5568; max-width: 700px; margin: 0 auto;"></p>
+            </div>
+            
+            <div style="text-align: center; margin-top: 2rem;" class="no-print">
+                <button onclick="saveAsPDF()" class="cta-btn" style="max-width: 250px; background: var(--secondary-gradient);">Save My Report (PDF)</button>
+            </div>
+        </section>
+
+        <footer>
+            &copy; 2024 DIVYA-DATA | ANALYTICS FOR THE SOUL
+        </footer>
+    </div>
+
+    <script>
+        // Pre-loaded Major Global Cities for Autocomplete
+        const cities = [
+            "New York, USA", "London, UK", "Mumbai, India", "Delhi, India", "Bangalore, India", 
+            "Tokyo, Japan", "Paris, France", "Berlin, Germany", "Dubai, UAE", "Singapore", 
+            "Sydney, Australia", "Toronto, Canada", "Los Angeles, USA", "San Francisco, USA",
+            "Chicago, USA", "Moscow, Russia", "Beijing, China", "Seoul, South Korea", 
+            "Sao Paulo, Brazil", "Mexico City, Mexico", "Cairo, Egypt", "Lagos, Nigeria",
+            "Bangkok, Thailand", "Jakarta, Indonesia", "Istanbul, Turkey", "Barcelona, Spain",
+            "Rome, Italy", "Amsterdam, Netherlands", "Zurich, Switzerland", "Vienna, Austria",
+            "Chennai, India", "Kolkata, India", "Hyderabad, India", "Pune, India"
+        ];
+
+        const cityInput = document.getElementById('pob');
+        const listContainer = document.getElementById('autocomplete-list');
+
+        cityInput.addEventListener('input', function() {
+            const val = this.value.toLowerCase();
+            listContainer.innerHTML = '';
+            if (!val) { listContainer.style.display = 'none'; return; }
+            
+            const filtered = cities.filter(c => c.toLowerCase().includes(val));
+            if (filtered.length > 0) {
+                listContainer.style.display = 'block';
+                filtered.forEach(city => {
+                    const div = document.createElement('div');
+                    div.className = 'autocomplete-item';
+                    div.textContent = city;
+                    div.onclick = () => {
+                        cityInput.value = city;
+                        listContainer.style.display = 'none';
+                    };
+                    listContainer.appendChild(div);
+                });
+            } else {
+                listContainer.style.display = 'none';
+            }
+        });
+
+        // Close list on outside click
+        document.addEventListener('click', (e) => {
+            if (e.target !== cityInput) listContainer.style.display = 'none';
+        });
+
+        const ZodiacSigns = ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"];
+        const Elements = {
+            "Aries": "Fire", "Leo": "Fire", "Sagittarius": "Fire",
+            "Taurus": "Earth", "Virgo": "Earth", "Capricorn": "Earth",
+            "Gemini": "Air", "Libra": "Air", "Aquarius": "Air",
+            "Cancer": "Water", "Scorpio": "Water", "Pisces": "Water"
+        };
+
+        const Interpretations = {
+            "Fire": "You are driven by high energy, intuition, and a need for creative self-expression. You often act on impulse and possess a magnetic, courageous spirit.",
+            "Earth": "You are grounded, practical, and highly attuned to the physical world. Stability and tangible results are what drive your sense of security.",
+            "Air": "Your world is one of ideas, communication, and social connection. You process the world through logic and intellectual exploration.",
+            "Water": "Deeply intuitive and emotional, you feel the undercurrents of every situation. You are the 'healer' and the 'dreamer' of the zodiac."
+        };
+
+        function getSunSign(date) {
+            const day = date.getDate();
+            const month = date.getMonth() + 1;
+            if ((month == 3 && day >= 21) || (month == 4 && day <= 19)) return "Aries";
+            if ((month == 4 && day >= 20) || (month == 5 && day <= 20)) return "Taurus";
+            if ((month == 5 && day >= 21) || (month == 6 && day <= 20)) return "Gemini";
+            if ((month == 6 && day >= 21) || (month == 7 && day <= 22)) return "Cancer";
+            if ((month == 7 && day >= 23) || (month == 8 && day <= 22)) return "Leo";
+            if ((month == 8 && day >= 23) || (month == 9 && day <= 22)) return "Virgo";
+            if ((month == 9 && day >= 23) || (month == 10 && day <= 22)) return "Libra";
+            if ((month == 10 && day >= 23) || (month == 11 && day <= 21)) return "Scorpio";
+            if ((month == 11 && day >= 22) || (month == 12 && day <= 21)) return "Sagittarius";
+            if ((month == 12 && day >= 22) || (month == 1 && day <= 19)) return "Capricorn";
+            if ((month == 1 && day >= 20) || (month == 2 && day <= 18)) return "Aquarius";
+            return "Pisces";
+        }
+
+        function getMoonSign(date, time) {
+            const refDate = new Date(2000, 0, 1);
+            const diffDays = (date - refDate) / (1000 * 60 * 60 * 24);
+            const moonCycle = 27.32166;
+            const position = (diffDays % moonCycle) / moonCycle;
+            const signIndex = Math.floor(position * 12);
+            return ZodiacSigns[Math.abs(signIndex % 12)];
+        }
+
+        function getAscendant(sunSign, timeStr) {
+            const [hours, minutes] = timeStr.split(':').map(Number);
+            const totalHours = hours + (minutes / 60);
+            const sunIndex = ZodiacSigns.indexOf(sunSign);
+            const shift = Math.floor((totalHours - 6 + 24) % 24 / 2);
+            return ZodiacSigns[(sunIndex + shift) % 12];
+        }
+
+        let charts = {};
+
+        function initCharts(data) {
+            if(charts.element) charts.element.destroy();
+            if(charts.planet) charts.planet.destroy();
+
+            const ctx1 = document.getElementById('elementChart').getContext('2d');
+            charts.element = new Chart(ctx1, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Fire', 'Earth', 'Air', 'Water'],
+                    datasets: [{
+                        data: data.elements,
+                        backgroundColor: ['#FECACA', '#FED7AA', '#E0F2FE', '#E9D5FF'],
+                        borderWidth: 0
+                    }]
+                },
+                options: { 
+                    cutout: '70%',
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { position: 'bottom' } }
+                }
+            });
+
+            const ctx2 = document.getElementById('planetChart').getContext('2d');
+            charts.planet = new Chart(ctx2, {
+                type: 'bar',
+                data: {
+                    labels: ['Sun', 'Moon', 'Mercury', 'Venus', 'Mars', 'Jupiter'],
+                    datasets: [{
+                        label: 'Potency (%)',
+                        data: data.planets,
+                        backgroundColor: '#C084FC',
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: { y: { beginAtZero: true, max: 100 } },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        document.getElementById('astrology-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const name = document.getElementById('name').value;
+            const dobValue = document.getElementById('dob').value;
+            const dob = new Date(dobValue);
+            const tob = document.getElementById('tob').value;
+
+            document.getElementById('results').setAttribute('data-name', name);
+            document.getElementById('form-section').style.display = 'none';
+            document.getElementById('loader').style.display = 'block';
+
+            setTimeout(() => {
+                const sun = getSunSign(dob);
+                const moon = getMoonSign(dob, tob);
+                const asc = getAscendant(sun, tob);
+                const sunElement = Elements[sun];
+
+                document.getElementById('res-sun').innerText = sun;
+                document.getElementById('res-moon').innerText = moon;
+                document.getElementById('res-asc').innerText = asc;
+
+                document.getElementById('analysis-personality').innerText = 
+                    `${name}, as a ${sun} Sun with a ${asc} Rising, you present a face of ${asc === 'Aries' ? 'bold initiative' : 'gentle observation'} to the world. ${Interpretations[sunElement]}`;
+                
+                document.getElementById('analysis-love').innerText = 
+                    `In love, your ${moon} Moon suggests you need ${['Cancer', 'Pisces', 'Scorpio'].includes(moon) ? 'deep emotional merging' : 'intellectual stimulation and space'}. Your emotional triggers are rooted in a need for authentic validation.`;
+
+                document.getElementById('analysis-career').innerText = 
+                    `Your career path is illuminated by your ${sun} placement. You thrive in environments that reward ${sunElement === 'Earth' ? 'consistency' : 'innovation'}.`;
+
+                document.getElementById('analysis-spiritual').innerText = 
+                    `Spiritual resonance for you is found in quiet contemplation. Your ${asc} energy acts as a gateway for your soul's purpose.`;
+
+                document.getElementById('final-verdict').innerText = 
+                    `Your unique celestial signature for ${name} suggests a lifetime of ${sunElement === 'Fire' ? 'creative expansion' : 'meaningful connection'}. This report is prepared by DIVYA-DATA for your spiritual journey.`;
+
+                const elementData = [
+                    sunElement === 'Fire' ? 40 : 20,
+                    sunElement === 'Earth' ? 40 : 20,
+                    sunElement === 'Air' ? 40 : 20,
+                    sunElement === 'Water' ? 40 : 20
+                ];
+                
+                const planetData = Array.from({length: 6}, () => Math.floor(Math.random() * 40) + 50);
+
+                initCharts({ elements: elementData, planets: planetData });
+
+                document.getElementById('loader').style.display = 'none';
+                document.getElementById('results').style.display = 'block';
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+
+            }, 2000);
+        });
+
+        function saveAsPDF() {
+            // Trigger browser print which we've styled to look like a clean PDF report
+            window.print();
+        }
+    </script>
+</body>
+</html>
